@@ -49,7 +49,7 @@ I do most of my work on a laptop so an ad blocker that is tied to a single locat
 
 dockerhole was heavily inspired by the great [Pi-Hole](https://pi-hole.net/) project. It was created and shoved into a docker container because I wanted to have better ad / malware blocking on my laptops while on the go. 
 
-I would also like to thank [Matt Holt](@holt) for his awesome [Caddy Webserver](https://github.com/mholt/caddy). 
+I would also like to thank @mholt for his awesome [Caddy Webserver](https://github.com/mholt/caddy). 
 
 ##  Contributing
 
@@ -58,3 +58,9 @@ I would also like to thank [Matt Holt](@holt) for his awesome [Caddy Webserver](
 3. Commit your changes (git commit -am 'Add some feature')
 4. Push to the branch (git push origin my-new-feature)
 5. Create new Pull Request
+
+## Copyright
+
+The MIT License (MIT)
+
+Copyright (c) 2016 Joe Doss
