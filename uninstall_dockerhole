@@ -1,0 +1,16 @@
+#!/bin/bash 
+
+DOCKERHOLEIP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' dockerhole`
+
+sudo systemctl stop dockerhole.service
+
+sudo systemctl disable dockerhole.service 
+sudo systemctl daemon-reload
+sudo rm -f /etc/systemd/system/dockerhole.service
+
+docker stop dockerhole
+sudo docker rm dockerhole
+sudo docker rmi dockerhole
+
+printf "Dockerhole has been stopped and uninstalled.\n" 
+printf "Be sure to remove ${DOCKERHOLEIP} from your DNS resolvers.\n"

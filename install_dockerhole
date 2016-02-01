@@ -1,0 +1,17 @@
+#!/bin/bash 
+
+sudo docker build -t dockerhole -f Dockerfile .
+
+sudo docker run --name dockerhole -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro dockerhole /usr/lib/systemd/systemd
+
+sudo cp dockerhole.service /etc/systemd/system
+sudo systemctl daemon-reload
+sudo systemctl enable dockerhole.service 
+
+DOCKERHOLEIP=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' dockerhole)
+
+printf "Dockerhole is installed and running. Set your DNS resolver to use: \n
+      \t ${DOCKERHOLEIP}\n\n"
+
+printf "You can enter Dockerhole with this command: \n
+      \t docker exec -t -i dockerhole /bin/bash or ./enter_dockerhole\n"

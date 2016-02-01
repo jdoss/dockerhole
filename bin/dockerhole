@@ -1,0 +1,239 @@
+#!/usr/bin/env bash
+
+#The MIT License (MIT)
+#
+#Copyright (c) 2016 Joe Doss
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy
+#of this software and associated documentation files (the "Software"), to deal
+#in the Software without restriction, including without limitation the rights
+#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#copies of the Software, and to permit persons to whom the Software is
+#furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in all
+#copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#SOFTWARE.
+
+HOMEDIR=/home/dockerhole
+DATADIR="${HOMEDIR}/data"
+LOGDIR="${HOMEDIR}/logs"
+HOSTFILE="${DATADIR}/dockerhole.txt"
+WHITELIST="${DATADIR}/whitelist.txt"
+BLACKLIST="${DATADIR}/blacklist.txt"
+STATS_DOMAIN="dockerhole"
+STATS_FILE="${HOMEDIR}/caddy/index.html"
+DATE=$(date +%Y-%m-%d:%H:%M:%S)
+IP=$(ip route get 8.8.8.8|grep src|awk '{print $7}')
+AGENT="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36"
+
+
+# Warning: Don't change the order of these without removing your .list and .timestamp files first. 
+# The ${ID} variable is tied to the ${LISTS} order.
+
+LISTS=(
+'https://adaway.org/hosts.txt'
+'http://adblock.gjtech.net/?format=unix-hosts'
+'http://adblock.mahakala.is/'
+'https://easylist-downloads.adblockplus.org/malwaredomains_full.txt'
+'http://hostsfile.mine.nu/Hosts'
+'http://hphosts.gt500.org/hosts.txt'
+'http://optimate.dl.sourceforge.net/project/adzhosts/HOSTS.txt'
+'http://pgl.yoyo.org/adservers/serverlist.php?hostformat=;showintro=0'
+'https://raw.githubusercontent.com/Free-Software-for-Android/AdAway/master/hosts/hosts.txt'
+'https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt'
+'https://s3.amazonaws.com/lists.disconnect.me/simple_malvertising.txt'
+'https://s3.amazonaws.com/lists.disconnect.me/simple_tracking.txt'
+'http://someonewhocares.org/hosts/hosts'
+'http://sysctl.org/cameleon/hosts.win'
+'http://winhelp2002.mvps.org/hosts.txt'
+'http://www.malwaredomainlist.com/hostslist/hosts.txt'
+)
+
+function download_lists() {
+
+  for ((ID=0; ID < "${#LISTS[@]}"; ID++)); do 
+  
+  URL=${LISTS[${ID}]}
+  DOMAIN=$(printf "${URL}"| cut -d / -f3)
+  SAVEFILE=$(printf "${DOMAIN}.${ID}.list")
+
+  if [[ -f ${DATADIR}/${DOMAIN}.${ID}.timestamp ]]; then
+    CURLWITHTIMESTAMP=$(curl -s ${URL} -z "$(date --rfc-2822 -d @$(<${DATADIR}/${DOMAIN}.${ID}.timestamp))" \
+      -o "${DATADIR}/${SAVEFILE}" -s -L -A ${AGENT} -w %{http_code})
+    if [[ "${CURLWITHTIMESTAMP}" == "200" ]]; then
+    
+      stat -c %Y "${DATADIR}/${SAVEFILE}" > "${DATADIR}/${DOMAIN}.${ID}".timestamp
+    
+    else
+      printf "${DATE} ${URL} ${CURLWITHTIMESTAMP}\n" >> ${LOGDIR}/download_lists.log
+    fi
+
+  else
+    CURL=$(curl ${URL} -o "${DATADIR}/${SAVEFILE}" -s -L -A ${AGENT} -w %{http_code})
+    printf "${DATE} ${URL} ${CURL}\n" >> ${LOGDIR}/download_lists.log
+    stat -c %Y "${DATADIR}/${SAVEFILE}" > "${DATADIR}/${DOMAIN}.${ID}".timestamp
+  fi
+
+  done
+}
+
+function parse_lists() {
+
+
+
+  if fgrep -Fq "${STATS_DOMAIN}" "${BLACKLIST}"
+    then
+      :
+    else
+      printf "${STATS_DOMAIN}\n" >> "${BLACKLIST}"
+  fi
+
+  mapfile -t LIST_DOMAINS_ARRAY < <(printf '%s\n' "${LISTS[@]}" |cut -d / -f3)
+  mapfile -t USER_DOMAINS_ARRAY < ${WHITELIST}
+  mapfile -t WHITELIST_ARRAY < <(printf "%s\n" "${USER_DOMAINS_ARRAY[@]}" "${LIST_DOMAINS_ARRAY[@]}" | sort | uniq -u)
+
+  mapfile -t MERGEDLISTS_ARRAY < <(cat ${DATADIR}/*.list |grep -v '^$\|^\s*\#' | awk '{print $2}' | sort -du |cut -d"#" -f1 |sed '/^\s*$/d'|grep -v ".localhost")
+  mapfile -t BLACKLIST_ARRAY < ${BLACKLIST}
+  mapfile -t PROCESSING_ARRAY < <(printf "%s\n" "${MERGEDLISTS_ARRAY[@]}" "${BLACKLIST_ARRAY[@]}" | sort | uniq -u)
+
+  for ITEM in "${PROCESSING_ARRAY[@]}"
+    do
+    MATCH=0
+        for SEARCHED in "${WHITELIST_ARRAY[@]}"
+        do
+            if [ "${ITEM}" == "${SEARCHED}" ]
+            then 
+                MATCH=1
+                break
+            fi  
+        done
+    if [ "${MATCH}" == 0 ]
+    then 
+        FINAL_LIST_ARRAY+=("$ITEM")
+    fi  
+  done
+
+  printf "%s\n" "${FINAL_LIST_ARRAY[@]}"|awk -v IP=${IP} '{print IP " " $1}' > ${HOSTFILE}
+
+  dos2unix ${HOSTFILE}
+
+}
+
+function reload_dnsmasq() {
+  sudo kill -s HUP $(/usr/bin/pidof dnsmasq)
+}
+
+function generate_stats() {
+
+  DOMAINS_BLOCKED=$(wc ${HOSTFILE} | awk '{print $1}')
+  QUERIES_TOTAL=$(fgrep 'query[' ${LOGDIR}/dnsmasq.log|wc -l)
+  QUERY_A=$(fgrep 'query[A]' ${LOGDIR}/dnsmasq.log|wc -l)
+  QUERY_AAAA=$(fgrep 'query[AAAA]' ${LOGDIR}/dnsmasq.log|wc -l)
+  QUERY_CNAME=$(fgrep 'query[CNAME]' ${LOGDIR}/dnsmasq.log|wc -l)
+  QUERY_MX=$(fgrep 'query[MX]' ${LOGDIR}/dnsmasq.log|wc -l)
+  QUERY_NS=$(fgrep 'query[NS]' ${LOGDIR}/dnsmasq.log|wc -l)
+  QUERY_SRV=$(fgrep 'query[SRV]' ${LOGDIR}/dnsmasq.log|wc -l)
+  QUERY_TXT=$(fgrep 'query[TXT]' ${LOGDIR}/dnsmasq.log|wc -l)
+  QUERY_PTR=$(fgrep 'query[PTR]' ${LOGDIR}/dnsmasq.log|wc -l)
+  QUERY_OTHER=$(printf "${QUERIES_TOTAL} - ${QUERY_A} - ${QUERY_AAAA} - ${QUERY_CNAME} - ${QUERY_MX} - ${QUERY_NS} - ${QUERY_SRV} - ${QUERY_TXT} - ${QUERY_PTR}\n"|bc)
+  ADS_BLOCKED=$(fgrep "${HOSTFILE}" ${LOGDIR}/dnsmasq.log |grep ${IP}|awk '{print $6}'|wc -l)
+  
+  if [[ "${QUERIES_TOTAL}" == "0" ]]; then
+    AD_PERCENTAGE="No Data"
+  else
+     AD_PERCENTAGE=$(printf "scale=5; ${ADS_BLOCKED} / ${QUERIES_TOTAL} * 100\n"|bc)
+  fi
+   
+cat <<- _STATS_ > ${STATS_FILE}
+<!doctype html>
+<html class="no-js" lang="">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<title>Dockerhole</title>
+<meta name="description" content="">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-7s5uDGW3AHqw6xtJmNNtr+OBRJUlgkNJEo78P4b0yRw= sha512-nNo+yCHEyn0smMxSswnf/OnX6/KwJuZTlNZBjauKhTK0c+zT+q5JOCx0UFhXQ6rJR9jg6Es8gPuD2uZcYDLqSw==" crossorigin="anonymous">
+
+</head>
+<body>
+
+<h1>Dockerhole Stats</h1>
+<h3>Number of Domains Blocked: ${DOMAINS_BLOCKED}</h3>
+<h3>Total Ads Blocked: ${ADS_BLOCKED}</h3>
+<h3>Ad Block Percentage: ${AD_PERCENTAGE}</h3>
+<hr>
+<h1>DNS Query Stats</h1>
+<h3>Total: ${QUERIES_TOTAL}</h3>
+<h3>A Records: ${QUERY_A}</h3>
+<h3>AAAA Records: ${QUERY_AAAA}</h3>
+<h3>CNAME Records: ${QUERY_CNAME}</h3>
+<h3>MX Records: ${QUERY_MX}</h3>
+<h3>NS Records: ${QUERY_NS}</h3>
+<h3>SRV Records: ${QUERY_SRV}</h3>
+<h3>TXT Records: ${QUERY_TXT}</h3>
+<h3>PTR Records: ${QUERY_PTR}</h3>
+<h3>Other Records: ${QUERY_OTHER}</h3>
+
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha256-KXn5puMvxCw+dAYznun+drMdG1IFl3agK0p/pqT9KAo= sha512-2e8qq0ETcfWRI4HJBzQiA3UoyFk6tbNyG+qSaIBZLyW9Xf3sWZHN/lxe9fTh1U45DpPf07yj94KsUHHWe4Yk1A==" crossorigin="anonymous"></script>
+</body>
+</html>
+
+_STATS_
+
+}
+
+function print_usage() {
+
+    printf "./dockerhole\n"
+    printf "\n"
+    printf "\t--help \t Show help\n"
+    printf "\t-a --all \t Download, Parse, Reload!\n"
+    printf "\t-d --download \t Download source lists.\n"
+    printf "\t-p --parse \t Parse source lists.\n"
+    printf "\t-r --reload \t Reload dnsmasq.\n"
+    printf "\t-s --stats \t Generate stats.\n"
+    printf "\n"
+
+}
+
+while [ "${1}" != "" ]; do
+    case ${1} in
+        -h | --help)
+            print_usage
+            exit
+            ;;
+        -a | --all)
+            download_lists
+            parse_lists
+            host_entry
+            reload_dnsmasq
+            ;;
+        -d | --download)
+            download_lists
+            ;;
+        -p | --parse)
+            parse_lists
+            ;;
+        -r | --reload)
+            reload_dnsmasq
+            ;;
+        -s | --stats)
+            generate_stats
+            ;;
+        *)
+            printf "ERROR: unknown parameter \"${1}\"\n"
+            print_usage
+            exit 1
+            ;;
+    esac
+    shift
+done

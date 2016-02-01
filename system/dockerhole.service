@@ -1,0 +1,15 @@
+[Unit]
+Description=Download many lists of domains and parse them into a single file.
+RefuseManualStart=no
+RefuseManualStop=yes
+After=network.target dnsmasq.service
+ 
+[Service]
+Type=oneshot
+ExecStart=/home/dockerhole/bin/dockerhole --all
+#ExecStartPost=/bin/sh -c 'DNSMASQ=$(/usr/bin/pidof "dnsmasq"); /bin/kill -s HUP $DNSMASQ'
+User=dockerhole
+Group=dockerhole
+
+[Install]
+WantedBy=multi-user.target

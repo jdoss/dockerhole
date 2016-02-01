@@ -1,0 +1,12 @@
+[Unit]
+Description=Download many lists of domains and parse them into a single file.
+RefuseManualStart=no
+RefuseManualStop=no
+ 
+[Timer]
+OnCalendar=weekly
+Persistent=true
+Unit=dockerhole.service
+
+[Install]
+WantedBy=timers.target

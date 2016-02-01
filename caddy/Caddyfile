@@ -1,0 +1,59 @@
+http://dockerhole {
+    root /home/dockerhole/caddy
+    tls off
+
+    ext .html .htm .js
+
+    gzip {
+      ext .html .htm .js .txt
+    }
+    
+    log /home/dockerhole/logs/dockerhole.local.access.log {
+      rotate {
+      size 100 # Rotate after 100 MB
+      keep 10  # Keep at most 10 log files
+      }
+    }
+    errors {
+      log /home/dockerhole/logs/dockerhole.local.error.log {
+      size 50 # Rotate after 50 MB
+      keep 5  # Keep at most 5 log files
+      }
+      404 404.html # Not Found
+    }
+
+}
+
+:80 {
+  root /home/dockerhole/caddy
+  tls off
+
+  ext .html .htm .js
+
+  gzip {
+    ext .html .htm .js .txt
+  }
+
+  header / X-Docker-Hole "Dockerhole"
+
+  rewrite {
+      regexp .*
+      ext    /
+      to     /hole/index.html
+  }
+
+  errors {
+    log /home/dockerhole/logs/error.log {
+      size 50 # Rotate after 50 MB 
+      keep 5  # Keep at most 5 log files
+    }
+    404 404.html # Not Found
+  }
+
+  log /home/dockerhole/logs/access.log {
+    rotate {
+      size 100 # Rotate after 100 MB 
+      keep 10  # Keep at most 10 log files
+    }
+  }
+}

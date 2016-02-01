@@ -1,0 +1,21 @@
+[Unit]
+Description=Caddy Webserver
+Documentation=https://caddyserver.com/
+After=network.target
+
+[Service]
+User=dockerhole
+Group=dockerhole
+PermissionsStartOnly=true
+ExecStartPre=/sbin/setcap cap_net_bind_service=+ep /usr/bin/caddy
+Environment=HOME=/home/dockerhole/caddy
+WorkingDirectory=/home/dockerhole/caddy
+LimitNOFILE=4096
+ExecStart=/usr/bin/caddy -conf="/home/dockerhole/caddy/Caddyfile"
+PIDFile=/var/run/caddy.pid
+ExecReload=/bin/kill -USR1 $MAINPID
+Restart=on-failure
+StartLimitInterval=120
+
+[Install]
+WantedBy=multi-user.target

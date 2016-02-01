@@ -1,0 +1,12 @@
+[Unit]
+Description=Generate Dockerhole Stats
+RefuseManualStart=no
+RefuseManualStop=no
+ 
+[Timer]
+OnCalendar=*:0/5
+Persistent=true     
+Unit=dockerhole_stats.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,15 @@
+[Unit]
+Description=Generate Dockerhole Stats
+RefuseManualStart=no
+RefuseManualStop=yes
+Before=dnsmasq.service
+After=network.target dockerhole.service
+ 
+[Service]
+Type=oneshot
+ExecStart=/home/dockerhole/bin/dockerhole --stats
+User=dockerhole
+Group=dockerhole
+
+[Install]
+WantedBy=multi-user.target
