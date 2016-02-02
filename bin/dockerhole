@@ -87,8 +87,6 @@ function download_lists() {
 
 function parse_lists() {
 
-
-
   if fgrep -Fq "${STATS_DOMAIN}" "${BLACKLIST}"
     then
       :
