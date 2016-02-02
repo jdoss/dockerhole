@@ -37,9 +37,7 @@ http://dockerhole {
   header / X-Docker-Hole "Dockerhole"
 
   rewrite {
-      regexp .*
-      ext    /
-      to     /hole/index.html
+    /hole/index.html
   }
 
   errors {
