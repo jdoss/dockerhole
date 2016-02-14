@@ -4,7 +4,7 @@ ENV container docker
 ENV TERM linux
 
 RUN dnf update -y; \
-dnf install 'dnf-command(copr)' sudo dnsmasq dos2unix iproute procps-ng -y; \
+dnf install 'dnf-command(copr)' sudo bc dnsmasq dos2unix iproute procps-ng -y; \
 dnf copr enable jdoss/caddy -y; \
 dnf install caddy -y; \
 dnf clean all; \
