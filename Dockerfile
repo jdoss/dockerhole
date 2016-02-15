@@ -4,7 +4,7 @@ ENV container docker
 ENV TERM linux
 
 RUN dnf -y update; \
-systemctl mask 
+systemctl mask \
 dev-hugepages.mount \
 dev-mqueue.mount \
 display-manager.service \
