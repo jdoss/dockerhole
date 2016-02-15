@@ -1,9 +1,20 @@
-FROM jdoss/fedora-systemd
+FROM fedora
 MAINTAINER Joe Doss <joe@joedoss.com>
 ENV container docker
 ENV TERM linux
 
-RUN dnf update -y; \
+RUN dnf -y update; \
+systemctl mask 
+dev-hugepages.mount \
+dev-mqueue.mount \
+display-manager.service \
+graphical.target \
+sys-fs-fuse-connections.mount \
+sys-kernel-config.mount \
+sys-kernel-debug.mount \
+systemd-logind.service \
+systemd-remount-fs.service \
+tmp.mount; \
 dnf install 'dnf-command(copr)' sudo bc dnsmasq dos2unix iproute procps-ng -y; \
 dnf copr enable jdoss/caddy -y; \
 dnf install caddy -y; \
@@ -40,5 +51,9 @@ systemctl enable dnsmasq
 EXPOSE 53/tcp
 EXPOSE 53/udp
 EXPOSE 80/tcp
+
+VOLUME ["/home/dockerhole/data"]
+VOLUME ["/sys/fs/cgroup"]
+VOLUME ["/run"]
 
 CMD ["/usr/lib/systemd/systemd"]
