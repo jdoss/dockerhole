@@ -2,7 +2,7 @@
 
 sudo docker build -t dockerhole -f Dockerfile .
 
-sudo docker run --name dockerhole -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro dockerhole /usr/lib/systemd/systemd
+sudo docker run --privileged --restart=always --name dockerhole -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro dockerhole /usr/lib/systemd/systemd
 
 sudo cp dockerhole.service /etc/systemd/system
 sudo systemctl daemon-reload
