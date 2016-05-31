@@ -14,7 +14,8 @@ If you are running a Linux distro with systemd the ```install_dockerhole``` scri
 
 ###OS X
 
-  Todo.
+  * Complete [Docker setup on OS X](https://docs.docker.com/mac/step_one/)
+  * `¯\_(ツ)_/¯`
 
 ###Windows 
 
