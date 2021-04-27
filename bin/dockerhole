@@ -26,8 +26,8 @@ HOMEDIR=/home/dockerhole
 DATADIR="${HOMEDIR}/data"
 LOGDIR="${HOMEDIR}/logs"
 HOSTFILE="${DATADIR}/dockerhole.txt"
-WHITELIST="${DATADIR}/whitelist.txt"
-BLACKLIST="${DATADIR}/blacklist.txt"
+ALLOWLIST="${DATADIR}/allowlist.txt"
+DENYLIST="${DATADIR}/denylist.txt"
 STATS_DOMAIN="dockerhole"
 STATS_FILE="${HOMEDIR}/caddy/index.html"
 DATE=$(date +%Y-%m-%d:%H:%M:%S)
@@ -87,25 +87,25 @@ function download_lists() {
 
 function parse_lists() {
 
-  if fgrep -Fq "${STATS_DOMAIN}" "${BLACKLIST}"
+  if fgrep -Fq "${STATS_DOMAIN}" "${DENYLIST}"
     then
       :
     else
-      printf "${STATS_DOMAIN}\n" >> "${BLACKLIST}"
+      printf "${STATS_DOMAIN}\n" >> "${DENYLIST}"
   fi
 
   mapfile -t LIST_DOMAINS_ARRAY < <(printf '%s\n' "${LISTS[@]}" |cut -d / -f3)
-  mapfile -t USER_DOMAINS_ARRAY < ${WHITELIST}
-  mapfile -t WHITELIST_ARRAY < <(printf "%s\n" "${USER_DOMAINS_ARRAY[@]}" "${LIST_DOMAINS_ARRAY[@]}" | sort | uniq -u)
+  mapfile -t USER_DOMAINS_ARRAY < ${ALLOWLIST}
+  mapfile -t ALLOWLIST_ARRAY < <(printf "%s\n" "${USER_DOMAINS_ARRAY[@]}" "${LIST_DOMAINS_ARRAY[@]}" | sort | uniq -u)
 
   mapfile -t MERGEDLISTS_ARRAY < <(cat ${DATADIR}/*.list |grep -v '^$\|^\s*\#' | awk '{print $2}' | sort -du |cut -d"#" -f1 |sed '/^\s*$/d'|grep -v ".localhost")
-  mapfile -t BLACKLIST_ARRAY < ${BLACKLIST}
-  mapfile -t PROCESSING_ARRAY < <(printf "%s\n" "${MERGEDLISTS_ARRAY[@]}" "${BLACKLIST_ARRAY[@]}" | sort | uniq -u)
+  mapfile -t DENYLIST_ARRAY < ${DENYLIST}
+  mapfile -t PROCESSING_ARRAY < <(printf "%s\n" "${MERGEDLISTS_ARRAY[@]}" "${DENYLIST_ARRAY[@]}" | sort | uniq -u)
 
   for ITEM in "${PROCESSING_ARRAY[@]}"
     do
     MATCH=0
-        for SEARCHED in "${WHITELIST_ARRAY[@]}"
+        for SEARCHED in "${ALLOWLIST_ARRAY[@]}"
         do
             if [ "${ITEM}" == "${SEARCHED}" ]
             then 

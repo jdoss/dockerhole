@@ -1,5 +1,5 @@
 # dockerhole
-A DNS based ad and malware URL blocker in Docker. It will manage the downloading and parsing of known ad and malware URLs from  third party sources. Currently it blocks ~750k unique domains. It also has support for custom domain whitelists and blacklists.
+A DNS based ad and malware URL blocker in Docker. It will manage the downloading and parsing of known ad and malware URLs from  third party sources. Currently it blocks ~750k unique domains. It also has support for custom domain allow and deny lists.
 
 ## Quick Start
 

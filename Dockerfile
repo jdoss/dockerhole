@@ -26,8 +26,8 @@ mkdir /home/dockerhole/caddy; \
 mkdir /home/dockerhole/data; \
 mkdir /home/dockerhole/bin; \
 touch /home/dockerhole/data/dockerhole.txt \
-/home/dockerhole/data/whitelist.txt \
-/home/dockerhole/data/blacklist.txt \
+/home/dockerhole/data/allowlist.txt \
+/home/dockerhole/data/denylist.txt \
 /home/dockerhole/logs/download_lists.log \
 /home/dockerhole/logs/dnsmasq.log
 
